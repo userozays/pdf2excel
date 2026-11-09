@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF2Excel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23107c41'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h9' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#fafafa; --panel:#fff; --subtle:#f4f4f5; --line:#e4e4e7; --line-2:#d4d4d8;
+  --fg:#18181b; --fg-2:#3f3f46; --muted:#71717a;
+  --accent:#107c41; --accent-fg:#fff; --accent-soft:#e8f5ee;
+  --bad:#dc2626; --bad-soft:#fef2f2; --warn:#ca8a04; --warn-soft:#fefce8; --num:#1d4ed8;
+  --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.06);
+  /* yalnız sistem fontları: uygulama hiçbir dış adrese istek atmaz */
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#09090b; --panel:#111113; --subtle:#18181b; --line:#27272a; --line-2:#3f3f46;
+  --fg:#fafafa; --fg-2:#d4d4d8; --muted:#a1a1aa;
+  --accent:#22c55e; --accent-fg:#052e14; --accent-soft:#0f2a1a;
+  --bad:#f87171; --bad-soft:#2a1212; --warn:#facc15; --warn-soft:#2a250d; --num:#93c5fd;
+  --shadow:none;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono)}
+
+/* üst çubuk */
+.bar{height:56px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10}
+.bar-in{max-width:1320px;margin:0 auto;height:100%;padding:0 24px;display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.logo i{width:24px;height:24px;border-radius:6px;background:var(--accent);display:grid;place-items:center}
+.bar .hint{margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+.wrap{max-width:1320px;margin:0 auto;padding:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* yükleme */
+.intake{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+#drop{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;min-height:220px;padding:28px;
+  border:1.5px dashed var(--line-2);border-radius:var(--radius);background:var(--panel);cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s,background .15s}
+#drop:hover{border-color:var(--muted)}
+#drop.over{border-color:var(--accent);background:var(--accent-soft)}
+#drop .ico{width:44px;height:44px;border-radius:10px;background:var(--subtle);border:1px solid var(--line);display:grid;place-items:center;margin-bottom:8px;color:var(--fg-2)}
+#drop h1{font-size:17px;font-weight:600;margin:0}
+#drop p{margin:0;color:var(--muted);font-size:13px}
+#drop .pick{margin-top:12px}
+#drop .bar-prog{position:absolute;left:0;bottom:0;height:2px;width:30%;background:var(--accent);opacity:0}
+#drop.busy .bar-prog{opacity:1;animation:prog 1.1s ease-in-out infinite}
+#drop.busy{cursor:progress}
+@keyframes prog{0%{left:-30%}100%{left:100%}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);font-weight:500;font-size:13.5px;cursor:pointer;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--subtle)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07);background:var(--accent)}
+.btn.lg{height:40px;padding:0 18px;font-size:14px}
+
+.opts{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.opts h2{margin:0;font-size:13px;font-weight:600}
+.row{display:flex;flex-direction:column;gap:6px}
+.row>span{font-size:12.5px;color:var(--muted)}
+.seg{display:flex;background:var(--subtle);border:1px solid var(--line);border-radius:8px;padding:2px}
+.seg label{flex:1;position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:5px 8px;border-radius:6px;font-size:12.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg input:checked+span{background:var(--panel);color:var(--fg);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line)}
+.seg input:focus-visible+span{outline:2px solid var(--accent)}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--fg-2);cursor:pointer}
+.sw input{appearance:none;flex:none;width:32px;height:18px;border-radius:999px;background:var(--line-2);position:relative;cursor:pointer;margin:0;transition:background .15s}
+.sw input::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+.sw input:checked{background:var(--accent)}
+.sw input:checked::after{left:16px}
+.sep{height:1px;background:var(--line);margin:2px 0}
+
+.samples{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.samples button{height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);font:12px var(--mono);color:var(--fg-2);cursor:pointer}
+.samples button:hover{border-color:var(--line-2);background:var(--subtle)}
+#status{margin-top:10px;font-size:13px;color:var(--muted);min-height:20px}
+#status.err{color:var(--bad)}
+
+/* sonuç */
+#result{display:none;margin-top:24px}
+.head{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.state{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:5px 12px 5px 8px;border-radius:999px}
+.state.ok{background:var(--accent-soft);color:var(--accent)} .state.bad{background:var(--bad-soft);color:var(--bad)}
+.state b{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;color:#fff}
+.state.ok b{background:var(--accent)} .state.bad b{background:var(--bad)}
+.head .file{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.head .sp{flex:1}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.tile{padding:16px 18px;border-right:1px solid var(--line)}
+.tile:last-child{border-right:0}
+.tile .t{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);font-weight:500}
+.tile .t i{width:8px;height:8px;border-radius:50%}
+.tile .t i.ok{background:var(--accent)} .tile .t i.bad{background:var(--bad)} .tile .t i.na{background:var(--line-2)}
+.tile .n{font:500 24px/1.25 var(--mono);margin-top:6px;letter-spacing:-.02em}
+.tile .n.bad{color:var(--bad)} .tile .n.na{color:var(--muted);font-size:18px}
+.tile .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;padding:12px 18px;border-top:1px solid var(--line);background:var(--subtle);border-radius:0 0 var(--radius) var(--radius)}
+.tag{font-size:12px;color:var(--fg-2);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px;margin-top:16px;align-items:start}
+.panels details summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:8px;font-weight:500;font-size:13.5px}
+.panels summary::-webkit-details-marker{display:none}
+.panels summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.panels details[open] summary::after{transform:rotate(-135deg)}
+.panels ul{list-style:none;margin:0;padding:0 16px 12px;max-height:260px;overflow:auto;font-size:13px}
+.panels li{display:flex;gap:8px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+.panels li a{font:12px var(--mono);color:var(--num);text-decoration:none}
+.panels li a:hover{text-decoration:underline}
+.cnt{font:500 11.5px var(--mono);padding:1px 7px;border-radius:999px;background:var(--subtle);border:1px solid var(--line);color:var(--fg-2)}
+.cnt.bad{background:var(--bad-soft);border-color:transparent;color:var(--bad)} .cnt.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.okt{margin-left:auto;color:var(--accent);font-size:12.5px;font-weight:500} .badt{margin-left:auto;color:var(--bad);font-size:12.5px;font-weight:500}
+.err{color:var(--bad)}
+.warnbar{margin-top:12px;padding:10px 14px;border-radius:8px;background:var(--warn-soft);color:var(--fg-2);font-size:13px;border:1px solid var(--line)}
+
+/* tablo */
+.tbar{display:flex;align-items:center;gap:8px;margin:24px 0 10px;flex-wrap:wrap}
+.tabs{display:flex;gap:2px;background:var(--subtle);border:1px solid var(--line);border-radius:8px;padding:2px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;border-radius:6px;padding:5px 12px;font-size:13px;color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--panel);color:var(--fg);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line)}
+.tabs button small{color:var(--muted);font-family:var(--mono);margin-left:4px}
+.tbar .sp{flex:1}
+.split{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.split.pdf{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.tablewrap{overflow:auto;max-height:72vh}
+table{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:pre-wrap;vertical-align:top;max-width:360px}
+thead th{position:sticky;top:0;z-index:2;background:var(--subtle);color:var(--muted);font-weight:500;font-size:12px;text-align:center}
+tbody th{position:sticky;left:0;z-index:1;background:var(--subtle);color:var(--muted);font:400 11.5px/1.7 var(--mono);text-align:right;cursor:pointer;min-width:44px}
+tbody th:hover{color:var(--accent)}
+thead th:first-child{left:0;z-index:3}
+tbody tr:hover td{background:var(--subtle)}
+td.sayi{font-family:var(--mono);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.sayi.neg{color:var(--bad)}
+td.tarih{font-family:var(--mono);white-space:nowrap;color:var(--fg-2)}
+td.f-tasma,td.f-birlesik,td.f-sayfa{background:var(--warn-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent)}
+td.f-devam{box-shadow:inset 2px 0 0 var(--accent)}
+tr.flash td{animation:flash 1.5s ease}
+@keyframes flash{0%,40%{background:var(--warn-soft)}100%{background:transparent}}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;color:var(--muted);font-size:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.more{padding:10px 14px;color:var(--muted);font-size:12.5px}
+.pdfside{display:flex;flex-direction:column;gap:8px}
+.pdfnav{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.pdfnav .btn{height:30px;padding:0 10px}
+.pdfnav span{font-family:var(--mono);margin:0 4px}
+.pdfnav .x{margin-left:auto}
+.pdfpane{max-height:72vh;overflow:auto;padding:12px;background:var(--subtle)}
+.pdfpane img{width:100%;display:block;border-radius:4px;border:1px solid var(--line);background:#fff}
+
+.fade{animation:fade .35s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+@media (max-width:900px){
+  .intake{grid-template-columns:1fr}
+  .split.pdf{grid-template-columns:1fr}
+  .tiles{grid-template-columns:1fr}
+  .tile{border-right:0;border-bottom:1px solid var(--line)}
+  .tile:last-child{border-bottom:0}
+  .head{flex-wrap:wrap}
+}
+@media (max-width:520px){
+  .wrap{padding:16px}
+  .bar-in{padding:0 16px}
+  .bar .hint span{display:none}
+  .head .btn{width:100%}
+}
+</style>
+</head>
+<body>
+<header class="bar"><div class="bar-in">
+  <div class="logo"><i><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 3.5h10M2 7h10M2 10.5h6" stroke="var(--accent-fg)" stroke-width="1.8" stroke-linecap="round"/></svg></i>PDF2Excel</div>
+  <div class="hint"><i class="dot"></i><span>Yerel çalışıyor · dosyalar bilgisayardan çıkmaz</span></div>
+</div></header>
+
+<main class="wrap">
+  <section class="intake">
+    <div>
+      <div id="drop" tabindex="0" role="button" aria-label="PDF seç">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/></svg></div>
+        <h1>PDF'i sürükleyip bırak</h1>
+        <p>Tablolar Excel'e aktarılır, her hücre PDF'e karşı doğrulanır</p>
+        <span class="btn primary pick">Dosya seç</span>
+        <div class="bar-prog"></div>
+        <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+      </div>
+      <div id="samples" class="samples" hidden></div>
+      <div id="status" role="status"></div>
+    </div>
+
+    <div class="card opts">
+      <h2>Ayarlar</h2>
+      <div class="row"><span>Çıktı</span>
+        <div class="seg"><label><input type="radio" name="mode" value="tek" checked><span>Tek tablo</span></label><label><input type="radio" name="mode" value="sayfa"><span>Sayfa başına</span></label></div>
+      </div>
+      <div class="row"><span>Sayı biçimi</span>
+        <div class="seg"><label><input type="radio" name="locale" value="auto" checked><span>Otomatik</span></label><label><input type="radio" name="locale" value="tr"><span>1.234,56</span></label><label><input type="radio" name="locale" value="en"><span>1,234.56</span></label></div>
+      </div>
+      <div class="row"><span>Türkçe karakter onarımı (ý þ ð → ı ş ğ)</span>
+        <div class="seg"><label><input type="radio" name="trfix" value="auto" checked><span>Otomatik</span></label><label><input type="radio" name="trfix" value="on"><span>Açık</span></label><label><input type="radio" name="trfix" value="off"><span>Kapalı</span></label></div>
+      </div>
+      <div class="sep"></div>
+      <label class="sw">Sayı ve tarihleri dönüştür <input type="checkbox" id="convert" checked></label>
+      <label class="sw">Çok satırlı açıklamaları birleştir <input type="checkbox" id="join" checked></label>
+      <label class="sw">Tekrar eden üst/alt bilgiyi bir kez yaz <input type="checkbox" id="skiprep" checked></label>
+    </div>
+  </section>
+
+  <section id="result">
+    <div class="card">
+      <div class="head">
+        <span id="state" class="state"></span>
+        <span class="file" id="fname"></span>
+        <span class="sp"></span>
+        <button class="btn primary lg" id="dl"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Excel'i indir</button>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="panels">
+      <details class="card" id="pagesBox"><summary>Ayrıntılı doğrulama <span class="cnt" id="pagesCnt"></span></summary><ul id="pages"></ul></details>
+      <details class="card" id="flagsBox"><summary>Gözle bakılması önerilen hücreler <span class="cnt warn" id="flagsCnt"></span></summary><ul id="flags"></ul></details>
+    </div>
+    <div id="warns"></div>
+
+    <div class="tbar">
+      <div class="tabs" id="tabs"></div>
+      <span class="sp"></span>
+      <button class="btn" id="pdfBtn">PDF'i yanında aç</button>
+    </div>
+    <div class="split" id="split">
+      <div>
+        <div class="card tablewrap" id="tablewrap"></div>
+        <div class="legend">
+          <span><i style="background:var(--fg-2)"></i>Sayı / tarih (sağa yaslı, sabit genişlik)</span>
+          <span><i style="background:var(--bad)"></i>Eksi tutar</span>
+          <span><i style="background:var(--warn-soft);box-shadow:inset 0 0 0 1px var(--warn)"></i>Gözle kontrol önerilir</span>
+          <span><i style="box-shadow:inset 2px 0 0 var(--accent);background:var(--subtle)"></i>Çok satırlı, birleştirildi</span>
+          <span>Satır numarasına tıkla → PDF sayfası</span>
+        </div>
+      </div>
+      <div class="pdfside" id="pdfside" hidden>
+        <div class="pdfnav"><button class="btn" id="pPrev" aria-label="Önceki sayfa">‹</button><span id="pLbl"></span><button class="btn" id="pNext" aria-label="Sonraki sayfa">›</button><button class="btn x" id="pClose">Kapat</button></div>
+        <div class="card pdfpane"><img id="pImg" alt="PDF sayfası"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const NOTE = {tasma:"birden fazla sütuna taşıyor", birlesik:"aynı sütuna düşen parçalar birleştirildi",
+  devam:"alt satırdaki devam metni eklendi", sayfa:"sonraki sayfanın başındaki devam metni eklendi"};
+let job = null, sheet = 0, page = 1, last = null;
+const fmtN = n => (n||0).toLocaleString("tr-TR");
+function esc(s){return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function colName(i){let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+const radio = name => document.querySelector(`input[name="${name}"]:checked`).value;
+
+const drop = $("#drop"), file = $("#file");
+drop.onclick = () => file.click();
+drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files[0]) send(e.dataTransfer.files[0]); };
+file.onchange = () => { file.files[0] && send(file.files[0]); file.value = ""; };
+document.querySelectorAll(".opts input").forEach(i => i.addEventListener("change", () => last && send(last)));
+
+fetch("/api/samples").then(r => r.json()).then(list => {
+  if (!list.length) return;
+  const box = $("#samples");
+  box.hidden = false;
+  box.innerHTML = `<span>Test örnekleri:</span>` + list.map(n => `<button data-n="${esc(n)}">${esc(n.replace(/\.pdf$/,""))}</button>`).join("");
+  box.onclick = e => { const n = e.target.dataset.n; if (n) send({name: n, sample: true}); };
+}).catch(() => {});
+
+async function send(f) {
+  last = f;
+  $("#status").textContent = `${f.name} işleniyor…`;
+  $("#status").className = "";
+  drop.classList.add("busy");
+  const fd = new FormData();
+  if (f.sample) fd.append("sample", f.name); else fd.append("pdf", f);
+  fd.append("mode", radio("mode"));
+  fd.append("locale", radio("locale"));
+  fd.append("trfix", radio("trfix"));
+  fd.append("convert", $("#convert").checked ? "1" : "0");
+  fd.append("join", $("#join").checked ? "1" : "0");
+  fd.append("skiprep", $("#skiprep").checked ? "1" : "0");
+  const t0 = performance.now();
+  try {
+    const r = await fetch("/api/convert", {method: "POST", body: fd});
+    const j = await r.json().catch(() => ({error: `Sunucu hatası (${r.status})`}));
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    job = j; sheet = 0; job.fname = f.name;
+    $("#status").textContent = `${job.pages} sayfa · ${((performance.now()-t0)/1000).toFixed(1)} sn`;
+    show();
+  } catch (e) {
+    $("#status").textContent = e.message; $("#status").className = "err";
+  } finally {
+    drop.classList.remove("busy");
+  }
+}
+
+function show() {
+  const r = job.report, inf = r.info;
+  const res = $("#result");
+  res.style.display = "block";
+  res.classList.remove("fade"); void res.offsetWidth; res.classList.add("fade");
+
+  const chars = r.pages.reduce((a,p) => a + p.pdf_chars, 0);
+  const badPages = r.pages.filter(p => !p.ok);
+  const balBad = r.balance.some(b => b.errors.length);
+  $("#state").className = "state " + (r.ok ? "ok" : "bad");
+  $("#state").innerHTML = r.ok ? `<b>✓</b>Doğrulandı` : `<b>!</b>${balBad && !badPages.length && !r.value_errors.length ? "Bakiye zinciri tutmadı" : "Fark bulundu"}`;
+  $("#fname").textContent = job.fname;
+
+  const tiles = [
+    {s: badPages.length ? "bad" : "ok", t: "Karakterler",
+     n: badPages.length ? `${badPages.length} sayfa` : fmtN(chars),
+     d: badPages.length ? "sayfada fark var" : `${r.pages.length} sayfanın hepsi birebir`},
+    {s: r.value_errors.length ? "bad" : "ok", t: "Değerler",
+     n: r.value_errors.length ? `${r.value_errors.length} hata` : fmtN((inf.sayi||0) + (inf.tarih||0)),
+     d: r.value_errors.length ? "hücre PDF'ten farklı" : `${fmtN(inf.sayi)} sayı, ${fmtN(inf.tarih)} tarih PDF'teki gibi görünüyor`},
+  ];
+  if (r.balance.length) r.balance.forEach(b => tiles.push({s: b.errors.length ? "bad" : "ok", t: "Bakiye zinciri" + (r.balance.length > 1 ? ` · ${b.sheet}` : ""),
+     n: b.errors.length ? `${b.errors.length} kopukluk` : `${fmtN(b.checked)} işlem`,
+     d: b.errors.length ? `${b.checked} işlem kontrol edildi` : `${b.opening} → ${b.closing}`}));
+  else {
+    const rows = job.sheets.reduce((a,s) => a + s.nrows, 0), cols = Math.max(...job.sheets.map(s => s.ncols));
+    tiles.push({s: "ok", t: "Tablo", n: `${fmtN(rows)} × ${cols}`,
+      d: job.sheets.length > 1 ? `${job.sheets.length} sayfada satır × sütun` : "satır × sütun"});
+  }
+  $("#tiles").innerHTML = tiles.map(x => `<div class="tile"><div class="t"><i class="${x.s}"></i>${x.t}</div>
+    <div class="n ${x.s === "ok" ? "" : x.s}">${esc(x.n)}</div><div class="d">${esc(x.d)}</div></div>`).join("");
+
+  $("#meta").innerHTML = [
+    `Biçim: ${r.locale ? r.locale.toUpperCase() : "belirsiz"}`,
+    `${fmtN(r.cells)} hücre`,
+    inf.cizgili_tablo ? `${inf.cizgili_tablo} çizgili tablo` : "",
+    inf.birlestirilen_satir ? `${inf.birlestirilen_satir} devam satırı birleştirildi` : "",
+    inf.atlanan_tekrar_satir ? `${inf.atlanan_tekrar_satir} tekrar eden üst/alt bilgi atlandı` : "",
+    inf.mukerrer_karakter ? `${inf.mukerrer_karakter} mükerrer karakter atlandı` : "",
+    inf.tr_duzeltme ? `${inf.tr_duzeltme} Türkçe karakter onarıldı` : "",
+  ].filter(Boolean).map(x => `<span class="tag">${x}</span>`).join("");
+  $("#dl").onclick = async () => {
+    const api = window.pywebview && window.pywebview.api;
+    if (!api) { location.href = `/api/download/${job.id}`; return; }   // tarayıcıda
+    const res = await api.save_xlsx(job.id, job.fname);                 // masaüstünde: Farklı kaydet
+    if (res && res.ok) {
+      $("#status").innerHTML = `Kaydedildi: <a href="#" id="openx">${esc(res.path)}</a> (Excel'de açmak için tıkla)`;
+      $("#status").className = "";
+      $("#openx").onclick = e => { e.preventDefault(); api.open_file(res.path); };
+      $("#status").scrollIntoView({block: "center", behavior: "smooth"});
+    } else if (res && res.error) { $("#status").textContent = res.error; $("#status").className = "err"; }
+  };
+
+  const issues = badPages.length + r.value_errors.length + r.balance.reduce((a,b) => a + b.errors.length, 0);
+  $("#pagesCnt").textContent = issues ? `${issues} sorun` : `${r.pages.length} sayfa`;
+  $("#pagesCnt").className = "cnt" + (issues ? " bad" : "");
+  $("#pages").innerHTML = r.pages.map(p =>
+      `<li>Sayfa ${p.page} <span style="color:var(--muted)">· ${fmtN(p.pdf_chars)} karakter</span><span class="${p.ok?"okt":"badt"}">${p.ok?"birebir":esc(p.diff)}</span></li>`).join("")
+    + r.balance.map(b => `<li>Bakiye zinciri <span style="color:var(--muted)">· ${esc(b.sheet)} · ${b.order}</span><span class="${b.errors.length?"badt":"okt"}">${b.errors.length ? b.errors.length + " kopukluk" : "tutarlı"}</span></li>`
+      + b.errors.slice(0,50).map(e => `<li class="err"><a href="#" data-s="${esc(b.sheet)}" data-r="${e.row}">${esc(b.sheet)}!${e.ref}</a> önceki bakiye + tutar = ${esc(e.expected)}, PDF'te ${esc(e.actual)}</li>`).join("")).join("")
+    + r.value_errors.slice(0,50).map(e => `<li class="err">${esc(e.sheet)}!${e.ref}: PDF «${esc(e.pdf)}» ≠ Excel «${esc(e.excel)}»</li>`).join("");
+  $("#pagesBox").open = issues > 0;
+
+  const warnFlags = r.flags.filter(f => f.notes.some(n => n !== "devam"));
+  $("#flagsBox").hidden = !warnFlags.length;
+  $("#flagsCnt").textContent = warnFlags.length;
+  $("#flags").innerHTML = warnFlags.slice(0,200).map(f =>
+    `<li><a href="#" data-s="${esc(f.sheet)}" data-r="${f.row}">${esc(f.sheet)}!${f.ref}</a><span>${f.notes.filter(n=>n!=="devam").map(n=>NOTE[n]).join(", ")} — «${esc(f.text)}»</span></li>`).join("");
+  $("#pages").onclick = $("#flags").onclick = e => {
+    const a = e.target.closest("a"); if (!a) return; e.preventDefault();
+    sheet = job.sheets.findIndex(s => s.name === a.dataset.s); renderSheet();
+    const tr = document.querySelector(`#tablewrap tr[data-r="${a.dataset.r}"]`);
+    if (tr) { tr.scrollIntoView({block:"center", behavior:"smooth"}); tr.classList.add("flash"); setTimeout(() => tr.classList.remove("flash"), 1600); }
+  };
+  $("#warns").innerHTML = r.warnings.map(w => `<div class="warnbar">${esc(w)}</div>`).join("");
+  renderSheet();
+}
+
+function renderSheet() {
+  $("#tabs").innerHTML = job.sheets.map((s,i) => `<button class="${i===sheet?"on":""}" data-i="${i}">${esc(s.name)}<small>${s.nrows}</small></button>`).join("");
+  $("#tabs").onclick = e => { const b = e.target.closest("button"); if (b) { sheet = +b.dataset.i; renderSheet(); } };
+  const s = job.sheets[sheet];
+  const cover = new Set(), span = {};
+  for (const [r0,c0,r1,c1] of s.merges) {
+    span[r0+","+c0] = [r1-r0+1, c1-c0+1];
+    for (let r=r0;r<=r1;r++) for (let c=c0;c<=c1;c++) if (r!==r0||c!==c0) cover.add(r+","+c);
+  }
+  let h = "<table><thead><tr><th></th>";
+  for (let c=0;c<s.ncols;c++) h += `<th>${colName(c)}</th>`;
+  h += "</tr></thead><tbody>";
+  s.rows.forEach((row, r) => {
+    h += `<tr data-r="${r}"><th data-p="${row.p}" title="PDF sayfa ${row.p}">${r+1}</th>`;
+    for (let c=0;c<s.ncols;c++) {
+      if (cover.has(r+","+c)) continue;
+      const cell = row.c[c], sp = span[r+","+c];
+      const attrs = sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : "";
+      if (!cell) { h += `<td${attrs}></td>`; continue; }
+      const neg = cell.k === "sayi" && /^[(\-−]|-$/.test(cell.t.trim());
+      const cls = [cell.k || "", neg ? "neg" : "", ...cell.n.map(n => "f-"+n)].join(" ").trim();
+      const tip = cell.n.length ? ` title="${cell.n.map(n=>NOTE[n]).join(", ")}"` : "";
+      h += `<td class="${cls}"${attrs}${tip}>${esc(cell.t)}</td>`;
+    }
+    h += "</tr>";
+  });
+  h += "</tbody></table>";
+  if (s.nrows > s.rows.length) h += `<p class="more">Önizlemede ilk ${s.rows.length} satır var; Excel'de ${fmtN(s.nrows)} satırın tamamı bulunuyor.</p>`;
+  $("#tablewrap").innerHTML = h;
+  $("#tablewrap").onclick = e => { const th = e.target.closest("tbody th"); if (th) openPage(+th.dataset.p); };
+}
+
+function openPage(n) {
+  page = Math.min(Math.max(1, n), job.pages);
+  $("#pdfside").hidden = false;
+  $("#split").classList.add("pdf");
+  $("#pImg").src = `/api/page/${job.id}/${page}.png`;
+  $("#pLbl").textContent = `${page} / ${job.pages}`;
+  $("#pdfBtn").textContent = "PDF'i kapat";
+}
+function closePdf(){ $("#pdfside").hidden = true; $("#split").classList.remove("pdf"); $("#pdfBtn").textContent = "PDF'i yanında aç"; }
+$("#pdfBtn").onclick = () => $("#pdfside").hidden ? openPage(page) : closePdf();
+$("#pPrev").onclick = () => openPage(page-1);
+$("#pNext").onclick = () => openPage(page+1);
+$("#pClose").onclick = closePdf;
+</script>
+</body>
+</html>

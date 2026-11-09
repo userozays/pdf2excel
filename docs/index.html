@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF2Excel — PDF tablolarını doğrulanmış Excel'e çevirin</title>
+<meta name="description" content="PDF'teki tabloları Excel'e çeviren, her hücreyi PDF'e karşı doğrulayan ücretsiz Windows uygulaması. Dosyalarınız bilgisayarınızdan çıkmaz.">
+<meta property="og:title" content="PDF2Excel">
+<meta property="og:description" content="PDF tablolarını Excel'e çevirir, her hücreyi doğrular. Ücretsiz ve tamamen yerel.">
+<meta property="og:image" content="https://pdf2excel-ten.vercel.app/screenshot.png">
+<meta property="og:url" content="https://pdf2excel-ten.vercel.app/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23107c41'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h9' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#fff; --soft:#fafafa; --subtle:#f4f4f5; --line:#e4e4e7; --fg:#18181b; --fg-2:#3f3f46; --muted:#71717a;
+  --accent:#107c41; --accent-fg:#fff; --accent-soft:#e8f5ee;
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  --mono:"Cascadia Mono",Consolas,ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#09090b; --soft:#0c0c0e; --subtle:#18181b; --line:#27272a; --fg:#fafafa; --fg-2:#d4d4d8; --muted:#a1a1aa;
+  --accent:#22c55e; --accent-fg:#052e14; --accent-soft:#0f2a1a;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.w{max-width:1120px;margin:0 auto;padding:0 24px}
+nav{height:64px;display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;text-decoration:none}
+.logo i{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+nav .sp{flex:1}
+nav a.gh{font-size:14px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:6px}
+nav a.gh:hover{color:var(--fg)}
+
+.hero{padding:72px 0 40px;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--soft)}
+.pill b{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+h1{font-size:clamp(34px,5.4vw,58px);line-height:1.08;letter-spacing:-.03em;font-weight:650;margin:20px auto 0;max-width:15ch}
+h1 span{color:var(--accent)}
+.lead{font-size:clamp(16px,2vw,19px);color:var(--muted);max-width:56ch;margin:20px auto 0}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.btn{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 22px;border-radius:10px;font-weight:600;font-size:15.5px;text-decoration:none;border:1px solid var(--line);transition:transform .15s,filter .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{background:var(--bg)}
+.small{font-size:13px;color:var(--muted);margin-top:12px}
+
+.shot{margin:48px auto 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--subtle);
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.35),0 8px 20px -10px rgba(0,0,0,.15)}
+.shot .bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--soft);font-size:12.5px;color:var(--muted)}
+.shot .bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.shot .bar span{margin-left:8px}
+.shot img{display:block;width:100%;height:auto}
+
+section{padding:72px 0 0}
+h2{font-size:clamp(24px,3vw,32px);letter-spacing:-.02em;margin:0;font-weight:650}
+.sub{color:var(--muted);margin:8px 0 0;max-width:60ch}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:28px}
+.f{border:1px solid var(--line);border-radius:12px;padding:22px;background:var(--soft)}
+.f .ic{width:36px;height:36px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:14px}
+.f h3{margin:0;font-size:17px;font-weight:600}
+.f p{margin:6px 0 0;color:var(--muted);font-size:15px}
+
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px;padding:0;list-style:none}
+.steps li{border-top:2px solid var(--accent);padding-top:16px}
+.steps li::before{counter-increment:s;content:counter(s,decimal-leading-zero);font:500 13px var(--mono);color:var(--accent)}
+.steps b{display:block;margin-top:6px;font-size:16px}
+.steps span{display:block;color:var(--muted);font-size:15px;margin-top:4px}
+
+.note{margin-top:28px;border:1px solid var(--line);border-radius:12px;padding:20px 22px;background:var(--soft);display:grid;grid-template-columns:auto 1fr;gap:16px}
+.nic{width:36px;height:36px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.note h3{margin:0;font-size:16px}
+.note p{margin:4px 0 0;color:var(--muted);font-size:15px}
+.note code{font:13.5px var(--mono);background:var(--subtle);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--fg-2)}
+ul.lim{margin:16px 0 0;padding-left:20px;color:var(--muted)}
+ul.lim li{margin:6px 0}
+
+.final{margin:80px 0 0;padding:48px 24px;text-align:center;border:1px solid var(--line);border-radius:16px;background:var(--soft)}
+footer{padding:40px 0 48px;color:var(--muted);font-size:14px;display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
+footer a{color:var(--muted)}
+
+@media (max-width:760px){
+  .w{padding:0 16px}
+  .hero{padding-top:40px}
+  .grid,.steps{grid-template-columns:1fr}
+  .btn{width:100%;justify-content:center}
+  .note{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="w">
+  <nav>
+    <a class="logo" href="#"><i><svg width="16" height="16" viewBox="0 0 14 14"><path d="M2 3.5h10M2 7h10M2 10.5h6" stroke="var(--accent-fg)" stroke-width="1.8" stroke-linecap="round"/></svg></i>PDF2Excel</a>
+    <span class="sp"></span>
+    <a class="gh" href="https://github.com/userozays/pdf2excel"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.88.87 2.34.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>GitHub</a>
+  </nav>
+
+  <header class="hero">
+    <span class="pill"><b></b>Ücretsiz · açık kaynak · tamamen yerel</span>
+    <h1>PDF tablolarını Excel'e çevirir. <span>Her hücreyi doğrular.</span></h1>
+    <p class="lead">Ekstre, fatura, rapor, fiyat listesi... PDF'teki tabloyu sütunlarıyla Excel'e aktarır; ardından Excel dosyasını açıp her karakteri ve her sayıyı PDF'le karşılaştırır. Bir şey tutmazsa size hangi hücre olduğunu söyler.</p>
+    <div class="cta">
+      <a class="btn primary" href="PDF2Excel.exe">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        Windows için indir</a>
+      <a class="btn ghost" href="https://github.com/userozays/pdf2excel">Kaynak kodu</a>
+    </div>
+    <p class="small">Windows 10 / 11 · tek dosya, kurulum yok · yaklaşık 35 MB</p>
+
+    <div class="shot">
+      <div class="bar"><i></i><i></i><i></i><span>PDF2Excel</span></div>
+      <picture>
+        <source srcset="screenshot-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshot.png" width="2640" height="1720" alt="PDF2Excel: bir banka ekstresinin doğrulanmış Excel önizlemesi">
+      </picture>
+    </div>
+  </header>
+
+  <section>
+    <h2>Neden PDF2Excel?</h2>
+    <p class="sub">Çoğu dönüştürücü "büyük ihtimalle doğru" bir dosya verir. PDF2Excel doğru olduğunu kontrol eder.</p>
+    <div class="grid">
+      <div class="f"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3>Doğrulanmış çıktı</h3><p>Excel dosyası yazıldıktan sonra yeniden açılır; her sayfanın karakterleri ve her sayı PDF'le birebir karşılaştırılır. Ekstrelerde "önceki bakiye + tutar = bakiye" zinciri de kontrol edilir.</p></div>
+      <div class="f"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3>Dosyanız bilgisayarınızdan çıkmaz</h3><p>Her şey sizin bilgisayarınızda çalışır. Yükleme yok, hesap yok, internet bağlantısı gerekmez. Banka ekstresi gibi gizli belgeler için güvenle kullanabilirsiniz.</p></div>
+      <div class="f"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
+        <h3>Gerçek tablolar</h3><p>Çizgili ya da çizgisiz tablolar, birleşik hücreler, birkaç satıra yayılan açıklamalar, sayfa sonunda bölünen satırlar ve her sayfada tekrar eden başlıklar doğru yere oturur.</p></div>
+      <div class="f"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3M5.5 5.5v3M4 17h3M14 5l-4 14M17 8h3M17 16h3"/></svg></div>
+        <h3>Sayılar gerçekten sayı</h3><p>1.234,56 ve 1,234.56 biçimleri otomatik tanınır; tutarlar toplanabilir sayı, tarihler tarih olarak gelir. Hesap numarası gibi baştaki sıfırlar ve 16 haneli numaralar bozulmaz.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="nasil">Nasıl kullanılır?</h2>
+    <ol class="steps">
+      <li><b>İndirip açın</b><span>PDF2Excel.exe'ye çift tıklayın. Kurulum gerekmez.</span></li>
+      <li><b>PDF'i bırakın</b><span>Dosyayı pencereye sürükleyin. Önizleme ve doğrulama sonucu saniyeler içinde gelir.</span></li>
+      <li><b>Excel'i kaydedin</b><span>"Excel'i indir" ile kaydedin. Dosyada bir de doğrulama raporu sayfası bulunur.</span></li>
+    </ol>
+    <div class="note">
+      <div class="nic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg></div>
+      <div>
+        <h3>İlk açılışta Windows uyarı verebilir</h3>
+        <p>Uygulama dijital olarak imzalanmadığı için Windows SmartScreen <code>Windows bilgisayarınızı korudu</code> diyebilir. <code>Ek bilgi</code> → <code>Yine de çalıştır</code> ile açabilirsiniz. Kaynak kodu <a href="https://github.com/userozays/pdf2excel">GitHub'da</a> açıktır; isterseniz kendiniz derleyebilirsiniz.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sınırlar</h2>
+    <p class="sub">Neyi garanti ettiğini ve etmediğini açıkça söyler.</p>
+    <ul class="lim">
+      <li><b style="color:var(--fg)">Taranmış PDF'ler desteklenmiyor.</b> Metni seçilebilen PDF'ler gerekir; fotoğraf ya da taranmış sayfalar için OCR henüz yok. Uygulama böyle bir sayfada sizi uyarır.</li>
+      <li><b style="color:var(--fg)">Yerleşim yorumdur.</b> Bir metnin hangi sütuna ait olduğu hizalardan çıkarılır. Emin olunamayan hücreler sarıyla işaretlenir; PDF sayfasını yanında açıp karşılaştırabilirsiniz.</li>
+      <li><b style="color:var(--fg)">Şimdilik yalnız Windows.</b></li>
+    </ul>
+  </section>
+
+  <div class="final">
+    <h2>PDF'ten Excel'e, kanıtıyla.</h2>
+    <div class="cta"><a class="btn primary" href="PDF2Excel.exe">Windows için indir</a></div>
+  </div>
+
+  <footer>
+    <span>PDF2Excel · MIT lisansı</span>
+    <span><a href="https://github.com/userozays/pdf2excel">GitHub</a> · <a href="https://github.com/userozays/pdf2excel/issues">Sorun bildir</a></span>
+  </footer>
+</div>
+</body>
+</html>
